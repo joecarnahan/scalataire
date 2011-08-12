@@ -11,3 +11,4 @@ object Card {
   def allCards = for (suit <- suits; value <- values) yield new Card(suit, value)
 
 }
+
