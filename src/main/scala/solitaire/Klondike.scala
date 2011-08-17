@@ -3,10 +3,16 @@ package solitaire
 sealed case class Suit(cards: List[Card])
 
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[Suit], piles: List[List[Card]]) {
+
   def nl = System.getProperty("line.separator")
+
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
+    
+  def nextMoves: Iterable[GameState] = sys.error("todo")
+
 }
+
 
 object Game {
 
@@ -21,7 +27,6 @@ object Game {
         dealCount(GameState(remainingCards,
                             givenState.stack,
                             givenState.suits,
-                            //givenState.piles),
                             givenState.piles.patch(i, List(topCard :: givenState.piles(i)), 1)),
                   i,
                   j+1)
@@ -32,11 +37,10 @@ object Game {
         
 
   def apply() = {
-    val initial = GameState(Deck.shuffle, 
-                            Stack(List[Card]()), 
-                            List.fill(4)(Suit(List[Card]())),
-                            List.fill(7)(List[Card]()))
-    val afterDeal = deal(initial)
-    afterDeal
+    deal(GameState(Deck.shuffle, 
+                   Stack(List[Card]()), 
+                   List.fill(4)(Suit(List[Card]())),
+                   List.fill(7)(List[Card]())))
   }
+
 }
