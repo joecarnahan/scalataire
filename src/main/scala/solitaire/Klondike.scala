@@ -1,19 +1,17 @@
 package solitaire
 
-sealed case class Suit(cards: List[Card])
-
-sealed case class GameState(deck: Deck, stack: Stack, suits: List[Suit], piles: List[List[Card]]) {
+sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[List[Card]]) {
 
   def nl = System.getProperty("line.separator")
 
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
     
-  def nextMoves: Iterable[GameState] = deal :: putUpCards ++ moveCards
+  def nextMoves: Iterable[GameState] = List(draw) ++ putUpCards ++ moveCards
 
-  def deal: GameState = deal(3)
+  def draw: GameState = draw(3)
     
-  def deal(n: Int): GameState = 
+  def draw(n: Int): GameState = 
     if (n == 0)
       this
     else if (deck.cards.isEmpty) {
@@ -21,12 +19,30 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[Suit], piles: 
     }
     else {
       val (topCard, remainingCards) = deck.deal
-      GameState(remainingCards, stack.put(topCard), suits, piles).deal(n - 1)
+      GameState(remainingCards, stack.put(topCard), suits, piles).draw(n - 1)
     }
 
-  def putUpCards = List[GameState]() // TODO
+  def putUpCards: Iterable[GameState] =
+    (stack.top ++ piles.flatMap(_.headOption)).flatMap(putUpCard(_))
 
-  def moveCards = List[GameState]() // TODO
+  def putUpCard(card: Card): Option[GameState] =
+    if (topOfSuit(card.suit) == (card.value - 1))
+      Some(GameState(deck,
+                     Stack(removeIfTopCard(stack.cards, card)),
+                     suits.patch(card.suit, List(card :: suits(card.suit)), 1),
+                     piles.map(removeIfTopCard(_, card))))
+    else
+      None
+
+  def topOfSuit(suit: Int): Int = suits(suit).headOption.map(_.value).getOrElse(-1)
+
+  def removeIfTopCard(cards: List[Card], card: Card): List[Card] =
+    if (cards.isEmpty || (cards.head != card))
+      cards
+    else
+      cards.tail
+
+  def moveCards: Iterable[GameState] = List[GameState]() // TODO
 
 }
 
@@ -56,7 +72,7 @@ object Game {
   def apply() = {
     deal(GameState(Deck.shuffle, 
                    Stack(),
-                   List.fill(4)(Suit(List[Card]())),
+                   List.fill(4)(List[Card]()),
                    List.fill(7)(List[Card]())))
   }
 
