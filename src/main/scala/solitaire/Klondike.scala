@@ -9,7 +9,24 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[Suit], piles: 
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
     
-  def nextMoves: Iterable[GameState] = sys.error("todo")
+  def nextMoves: Iterable[GameState] = deal :: putUpCards ++ moveCards
+
+  def deal: GameState = deal(3)
+    
+  def deal(n: Int): GameState = 
+    if (n == 0)
+      this
+    else if (deck.cards.isEmpty) {
+      GameState(Deck(stack.flip), Stack(), suits, piles)
+    }
+    else {
+      val (topCard, remainingCards) = deck.deal
+      GameState(remainingCards, stack.put(topCard), suits, piles).deal(n - 1)
+    }
+
+  def putUpCards = List[GameState]() // TODO
+
+  def moveCards = List[GameState]() // TODO
 
 }
 
@@ -38,7 +55,7 @@ object Game {
 
   def apply() = {
     deal(GameState(Deck.shuffle, 
-                   Stack(List[Card]()), 
+                   Stack(),
                    List.fill(4)(Suit(List[Card]())),
                    List.fill(7)(List[Card]())))
   }

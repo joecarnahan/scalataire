@@ -7,8 +7,12 @@ object Main {
   def main(args: Array[String]) = println(generateStats)
 
   def generateStats : String = {
-    val game = Game()
-    "Initial game:" + nl + game.toString + nl + "Next moves:" + game.nextMoves.mkString(nl)
-}
+    var game = Game()
+    (for (i <- 1 to 20) yield {
+      game = game.nextMoves.head
+      GameState(game.deck, game.stack, game.suits, game.piles)
+    }).mkString(nl + nl)
+  //  "Initial game:" + nl + game.toString + nl + "Next moves:" + nl + game.nextMoves.mkString(nl)
+  }
 
 }
