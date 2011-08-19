@@ -1,5 +1,10 @@
 package solitaire
 
+sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
+  override def toString = faceup.toString + facedown.toString
+}
+
+// TODO Change piles representation to distinguish face-up from face-down
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[List[Card]]) {
 
   def nl = System.getProperty("line.separator")
@@ -42,7 +47,11 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
     else
       cards.tail
 
-  def moveCards: Iterable[GameState] = List[GameState]() // TODO
+  def moveCards: Iterable[GameState] = allMoveableStacks.flatMap(buildPossibleMoves(_))
+
+  def allMoveableStacks: Iterable[List[Card]] = stack.top.map(List(_)) // TODO Add all face-up cards and their subsequences
+
+  def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = List[GameState]() // TODO Implement
 
 }
 
