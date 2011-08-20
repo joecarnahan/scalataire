@@ -1,11 +1,32 @@
 package solitaire
 
 sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
-  override def toString = faceup.toString + facedown.toString
+
+  override def toString = faceup.toString + " on top of " + facedown.toString
+
+  def getTopCard: Option[Card] = faceup.headOption
+
+  def remove(cards: List[Card]): Pile = {
+    def removeAllOrNothing(cardsToRemove: List[Card], currentPile: Pile, originalPile: Pile): Pile =
+      if (cardsToRemove.isEmpty)
+        if (currentPile.faceup.isEmpty && !currentPile.facedown.isEmpty)
+          Pile(List(currentPile.facedown.head), currentPile.facedown.tail)
+        else
+          currentPile
+      else if (currentPile.faceup.isEmpty)
+        originalPile
+      else if (cardsToRemove.head == currentPile.faceup.head)
+        removeAllOrNothing(cardsToRemove.tail, Pile(currentPile.faceup.tail, currentPile.facedown), originalPile)
+      else
+        originalPile
+    removeAllOrNothing(cards, this, this)
+  }
+
+  def deal(card: Card): Pile = Pile(List(card), faceup ++ facedown)
+
 }
 
-// TODO Change piles representation to distinguish face-up from face-down
-sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[List[Card]]) {
+sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
 
   def nl = System.getProperty("line.separator")
 
@@ -28,14 +49,14 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
     }
 
   def putUpCards: Iterable[GameState] =
-    (stack.top ++ piles.flatMap(_.headOption)).flatMap(putUpCard(_))
+    (stack.top ++ piles.flatMap(_.getTopCard)).flatMap(putUpCard(_))
 
   def putUpCard(card: Card): Option[GameState] =
     if (topOfSuit(card.suit) == (card.value - 1))
       Some(GameState(deck,
                      Stack(removeIfTopCard(stack.cards, card)),
                      suits.patch(card.suit, List(card :: suits(card.suit)), 1),
-                     piles.map(removeIfTopCard(_, card))))
+                     piles.map(_.remove(List(card)))))
     else
       None
 
@@ -69,7 +90,7 @@ object Game {
         dealCount(GameState(remainingCards,
                             givenState.stack,
                             givenState.suits,
-                            givenState.piles.patch(i, List(topCard :: givenState.piles(i)), 1)),
+                            givenState.piles.patch(i, List(givenState.piles(i).deal(topCard)), 1)),
                   i,
                   j+1)
       }
@@ -82,7 +103,7 @@ object Game {
     deal(GameState(Deck.shuffle, 
                    Stack(),
                    List.fill(4)(List[Card]()),
-                   List.fill(7)(List[Card]())))
+                   List.fill(7)(Pile(List[Card](),List[Card]()))))
   }
 
 }
