@@ -30,6 +30,15 @@ sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
     else
       Pile(cards ++ faceup, facedown)
 
+  def moveableStacks: List[List[Card]] = {
+    def moveableStacks(cards: List[Card], stacks: List[List[Card]]): List[List[Card]] =
+      cards match {
+        case (_ :: rest) => moveableStacks(rest, cards.reverse :: stacks)
+        case _ => stacks
+      }
+    moveableStacks(faceup.reverse, List[List[Card]]())
+  }
+
 }
 
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
@@ -76,7 +85,8 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
 
   def moveCards: Iterable[GameState] = allMoveableStacks.flatMap(buildPossibleMoves(_))
 
-  def allMoveableStacks: Iterable[List[Card]] = stack.top.map(List(_)) // TODO Add all face-up cards and their subsequences
+  def allMoveableStacks: Iterable[List[Card]] = 
+    stack.top.map(List(_)) ++ piles.flatMap(_.moveableStacks)
 
   def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = 
     (0 until Game.numberOfPiles).flatMap(moveCardsToPile(_, cardsToMove))

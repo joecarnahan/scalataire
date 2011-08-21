@@ -7,7 +7,7 @@ object Main {
   def main(args: Array[String]) = println(generateStats)
 
   def generateStats : String = {
-    val game = Game().nextMoves.head
+    val game = Game()
     "Initial game:" + nl + game.toString + nl + "Next moves:" + nl + game.nextMoves.mkString(nl)
   }
 
