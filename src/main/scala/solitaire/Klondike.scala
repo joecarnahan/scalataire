@@ -24,6 +24,12 @@ sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
 
   def deal(card: Card): Pile = Pile(List(card), faceup ++ facedown)
 
+  def put(cards: List[Card]): Pile = 
+    if (faceup.isEmpty)
+      Pile(cards, List[Card]())
+    else
+      Pile(cards ++ faceup, facedown)
+
 }
 
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
@@ -72,16 +78,44 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
 
   def allMoveableStacks: Iterable[List[Card]] = stack.top.map(List(_)) // TODO Add all face-up cards and their subsequences
 
-  def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = List[GameState]() // TODO Implement
+  def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = 
+    (0 until Game.numberOfPiles).flatMap(moveCardsToPile(_, cardsToMove))
+
+  def moveCardsToPile(index: Int, cardsToMove: List[Card]): Option[GameState] = 
+    if (goesOn(cardsToMove.lastOption, piles(index).faceup.headOption))
+      Some(GameState(deck,
+                     if (cardsToMove.length == 1)
+                       Stack(removeIfTopCard(stack.cards, cardsToMove.head))
+                     else 
+                       stack,
+                     suits,
+                     piles.map(_.remove(cardsToMove)).
+                       patch(index, List(piles(index).put(cardsToMove)), 1)))
+    else
+      None
+
+  def goesOn(a: Option[Card], b: Option[Card]): Boolean =
+    a match {
+      case Some(aCard) => b match {
+        case Some(bCard) => 
+          ((aCard.value + 1) == bCard.value) &&
+          ((aCard.isBlack && bCard.isRed) || (aCard.isRed && bCard.isBlack))
+        case None =>
+          aCard.value == Card.king
+      }
+      case None => false
+    }
 
 }
 
 
 object Game {
 
+  val numberOfPiles = 7
+
   def deal(initial: GameState) = {
     def dealCount(givenState: GameState, i: Int, j: Int): GameState = {
-      if (i >= 7)
+      if (i >= numberOfPiles)
         givenState
       else if (j > i)
         dealCount(givenState, i+1, 0)
@@ -102,8 +136,8 @@ object Game {
   def apply() = {
     deal(GameState(Deck.shuffle, 
                    Stack(),
-                   List.fill(4)(List[Card]()),
-                   List.fill(7)(Pile(List[Card](),List[Card]()))))
+                   List.fill(Card.suits.length)(List[Card]()),
+                   List.fill(numberOfPiles)(Pile(List[Card](),List[Card]()))))
   }
 
 }
