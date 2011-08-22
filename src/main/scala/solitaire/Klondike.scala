@@ -48,7 +48,8 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
     
-  def nextMoves: Iterable[GameState] = List(draw) ++ putUpCards ++ moveCards
+  def nextMoves(previousMoves: Seq[GameState]): Iterable[GameState] = 
+    (List(draw) ++ putUpCards ++ moveCards).filterNot(previousMoves.contains(_))
 
   def draw: GameState = draw(3)
     
@@ -115,6 +116,14 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
       }
       case None => false
     }
+
+  def moveSequence(moves: Int): List[GameState] = moveSequence(moves, List[GameState]())
+
+  def moveSequence(movesLeft: Int, pastMoves: List[GameState]): List[GameState] =
+    if (movesLeft <= 0)
+      pastMoves.reverse
+    else
+      nextMoves(pastMoves).lastOption.map((s: GameState) => s.moveSequence(movesLeft - 1, s :: pastMoves)).getOrElse(pastMoves.reverse)
 
 }
 
