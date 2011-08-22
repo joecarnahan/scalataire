@@ -117,13 +117,31 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
       case None => false
     }
 
-  def moveSequence(moves: Int): List[GameState] = moveSequence(moves, List[GameState]())
+  def moveSequence(moves: Int): List[GameState] = {
+    def moveSequence(current: GameState, movesLeft: Int, pastMoves: List[GameState]): List[GameState] =
+      if (movesLeft <= 0)
+        pastMoves.reverse
+      else {
+        val nextMovesResult = current.nextMoves(pastMoves)
+        if (nextMovesResult.isEmpty)
+          pastMoves.reverse
+        else {
+          val nextMove = nextMovesResult.last
+          moveSequence(nextMove, movesLeft - 1, nextMove :: pastMoves)
+        }
+      }
+    moveSequence(this, moves, List[GameState]())
+  }
 
-  def moveSequence(movesLeft: Int, pastMoves: List[GameState]): List[GameState] =
-    if (movesLeft <= 0)
-      pastMoves.reverse
-    else
-      nextMoves(pastMoves).lastOption.map((s: GameState) => s.moveSequence(movesLeft - 1, s :: pastMoves)).getOrElse(pastMoves.reverse)
+  def isWin = suits.filter(_.size != Card.king).isEmpty
+
+  //def getWin: Option[List[GameState]] = getWin(List[GameState]())
+
+  //def getWin(pastMoves: List[GameState]): Option[List[GameState]] =
+    //if (isWin)
+      //Some((this :: pastMoves).reverse)
+    //else
+      //nextMoves(pastMoves).lastOption.map((s: GameState) => s.getWin(s :: pastMoves)).getOrElse(None)
 
 }
 
