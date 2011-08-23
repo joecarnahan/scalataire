@@ -48,7 +48,7 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
     
-  def nextMoves(previousMoves: Seq[GameState]): Iterable[GameState] = 
+  def nextMoves(previousMoves: scala.collection.mutable.HashSet[GameState]): Iterable[GameState] = 
     (List(draw) ++ putUpCards ++ moveCards).filterNot(previousMoves.contains(_))
 
   def draw: GameState = draw(3)
@@ -118,19 +118,21 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
     }
 
   def moveSequence(moves: Int): List[GameState] = {
-    def moveSequence(current: GameState, movesLeft: Int, pastMoves: List[GameState]): List[GameState] =
+    import scala.collection.mutable.HashSet
+    def moveSequence(current: GameState, movesLeft: Int, pastSequence: List[GameState], pastSet: HashSet[GameState]): List[GameState] =
       if (movesLeft <= 0)
-        pastMoves.reverse
+        pastSequence.reverse
       else {
-        val nextMovesResult = current.nextMoves(pastMoves)
+        val nextMovesResult = current.nextMoves(pastSet)
         if (nextMovesResult.isEmpty)
-          pastMoves.reverse
+          pastSequence.reverse
         else {
           val nextMove = nextMovesResult.last
-          moveSequence(nextMove, movesLeft - 1, nextMove :: pastMoves)
+          pastSet += nextMove
+          moveSequence(nextMove, movesLeft - 1, nextMove :: pastSequence, pastSet)
         }
       }
-    moveSequence(this, moves, List[GameState]())
+    moveSequence(this, moves, List(this), HashSet(this))
   }
 
   def isWin = suits.filter(_.size != Card.king).isEmpty
