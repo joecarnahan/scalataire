@@ -2,6 +2,8 @@ package solitaire
 
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
 
+  // TODO Implement equals and hashcode so that isomorphic states are considered equal
+
   def nl = System.getProperty("line.separator")
 
   override def toString = 
@@ -147,11 +149,6 @@ object Game {
         0
       else
         statesToTry.foldLeft(0)(_ + _.pastStates.size) / statesToTry.size
-    def min(statesToTry: List[GameHistory]): Int = 
-      if (statesToTry.isEmpty)
-        0
-      else
-        statesToTry.foldLeft(Int.MaxValue)((a: Int, h: GameHistory) => a.min(h.pastStates.size))
     def max(statesToTry: List[GameHistory]): Int =
       if (statesToTry.isEmpty)
         0
@@ -160,9 +157,7 @@ object Game {
     def printState(statesToTry: List[GameHistory], message: String) = {
       println("Tried " + previousStates.size.toString + " states so far, with " +
               statesToTry.size.toString + " states left to try with these sizes: avg = " + 
-              average(statesToTry).toString + ", min = " + min(statesToTry).toString + 
-              ", max = " + max(statesToTry).toString)
-      println(message)
+              average(statesToTry).toString + ", max = " + max(statesToTry).toString + ": " + message)
     }
     /* end debug */
 
@@ -175,6 +170,7 @@ object Game {
             playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
 /* debug */ }
           else
+            // TODO Modify filter function to not rule out wins
 /* debug */ {
 /* debug */   val newListToTry = nextToTry.addAllNextMoves(restToTry, previousStates.contains(_))
 /* debug */   if ((previousStates.size % 1000) == 0) 
