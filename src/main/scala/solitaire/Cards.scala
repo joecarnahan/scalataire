@@ -34,3 +34,44 @@ object Stack {
   def apply(): Stack = Stack(List[Card]())
 }
 
+sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
+
+  override def toString = faceup.toString + " on top of " + facedown.toString
+
+  def getTopCard: Option[Card] = faceup.headOption
+
+  def remove(cards: List[Card]): Pile = {
+    def removeAllOrNothing(cardsToRemove: List[Card], currentPile: Pile, originalPile: Pile): Pile =
+      if (cardsToRemove.isEmpty)
+        if (currentPile.faceup.isEmpty && !currentPile.facedown.isEmpty)
+          Pile(List(currentPile.facedown.head), currentPile.facedown.tail)
+        else
+          currentPile
+      else if (currentPile.faceup.isEmpty)
+        originalPile
+      else if (cardsToRemove.head == currentPile.faceup.head)
+        removeAllOrNothing(cardsToRemove.tail, Pile(currentPile.faceup.tail, currentPile.facedown), originalPile)
+      else
+        originalPile
+    removeAllOrNothing(cards, this, this)
+  }
+
+  def deal(card: Card): Pile = Pile(List(card), faceup ++ facedown)
+
+  def put(cards: List[Card]): Pile = 
+    if (faceup.isEmpty)
+      Pile(cards, List[Card]())
+    else
+      Pile(cards ++ faceup, facedown)
+
+  def substacks: List[List[Card]] = {
+    def substacks(cards: List[Card], stacks: List[List[Card]]): List[List[Card]] =
+      cards match {
+        case (_ :: rest) => substacks(rest, cards.reverse :: stacks)
+        case _ => stacks
+      }
+    substacks(faceup.reverse, List[List[Card]]())
+  }
+
+}
+

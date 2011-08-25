@@ -1,46 +1,5 @@
 package solitaire
 
-sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
-
-  override def toString = faceup.toString + " on top of " + facedown.toString
-
-  def getTopCard: Option[Card] = faceup.headOption
-
-  def remove(cards: List[Card]): Pile = {
-    def removeAllOrNothing(cardsToRemove: List[Card], currentPile: Pile, originalPile: Pile): Pile =
-      if (cardsToRemove.isEmpty)
-        if (currentPile.faceup.isEmpty && !currentPile.facedown.isEmpty)
-          Pile(List(currentPile.facedown.head), currentPile.facedown.tail)
-        else
-          currentPile
-      else if (currentPile.faceup.isEmpty)
-        originalPile
-      else if (cardsToRemove.head == currentPile.faceup.head)
-        removeAllOrNothing(cardsToRemove.tail, Pile(currentPile.faceup.tail, currentPile.facedown), originalPile)
-      else
-        originalPile
-    removeAllOrNothing(cards, this, this)
-  }
-
-  def deal(card: Card): Pile = Pile(List(card), faceup ++ facedown)
-
-  def put(cards: List[Card]): Pile = 
-    if (faceup.isEmpty)
-      Pile(cards, List[Card]())
-    else
-      Pile(cards ++ faceup, facedown)
-
-  def moveableStacks: List[List[Card]] = {
-    def moveableStacks(cards: List[Card], stacks: List[List[Card]]): List[List[Card]] =
-      cards match {
-        case (_ :: rest) => moveableStacks(rest, cards.reverse :: stacks)
-        case _ => stacks
-      }
-    moveableStacks(faceup.reverse, List[List[Card]]())
-  }
-
-}
-
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
 
   def nl = System.getProperty("line.separator")
@@ -87,7 +46,7 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
   def moveCards: Iterable[GameState] = allMoveableStacks.flatMap(buildPossibleMoves(_))
 
   def allMoveableStacks: Iterable[List[Card]] = 
-    stack.top.map(List(_)) ++ piles.flatMap(_.moveableStacks)
+    stack.top.map(List(_)) ++ piles.flatMap(_.substacks)
 
   def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = 
     (0 until Game.numberOfPiles).flatMap(moveCardsToPile(_, cardsToMove))
