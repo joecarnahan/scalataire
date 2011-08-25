@@ -48,8 +48,8 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
   override def toString = 
     deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
     
-  def nextMoves(previousMoves: GameState => Boolean): Iterable[GameState] = 
-    (List(draw) ++ putUpCards ++ moveCards).filterNot(previousMoves)
+  def nextStates(movesToSkip: GameState => Boolean): Iterable[GameState] = 
+    (List(draw) ++ putUpCards ++ moveCards).filterNot(movesToSkip)
 
   def draw: GameState = draw(3)
     
@@ -123,11 +123,11 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
       if (movesLeft <= 0)
         pastSequence.reverse
       else {
-        val nextMovesResult = current.nextMoves(previousMoves.contains(_))
-        if (nextMovesResult.isEmpty)
+        val nextStatesResult = current.nextStates(previousMoves.contains(_))
+        if (nextStatesResult.isEmpty)
           pastSequence.reverse
         else {
-          val nextMove = nextMovesResult.last
+          val nextMove = nextStatesResult.last
           previousMoves += nextMove
           moveSequence(nextMove, movesLeft - 1, nextMove :: pastSequence)
         }
@@ -138,16 +138,17 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
 
   def isWin = suits.filter(_.size != Card.king).isEmpty
 
-  //def getWin: Option[List[GameState]] = getWin(List[GameState]())
-
-  //def getWin(pastMoves: List[GameState]): Option[List[GameState]] =
-    //if (isWin)
-      //Some((this :: pastMoves).reverse)
-    //else
-      //nextMoves(pastMoves).lastOption.map((s: GameState) => s.getWin(s :: pastMoves)).getOrElse(None)
-
 }
 
+sealed case class GameHistory(state: GameState, pastStates: List[GameState]) {
+
+  def allStates: List[GameState] = state :: pastStates
+
+  def addAllNextMoves(startingList: List[GameHistory], movesToSkip: GameState => Boolean): List[GameHistory] =
+    state.nextStates(movesToSkip).map(GameHistory(_, allStates)).
+      foldLeft(startingList)((histories: List[GameHistory], newHistory: GameHistory) => newHistory :: histories)
+
+}
 
 object Game {
 
@@ -171,13 +172,38 @@ object Game {
     }
     dealCount(initial, 0, 0)
   }
-        
 
-  def apply() = {
+  def newGame: GameState =
     deal(GameState(Deck.shuffle, 
                    Stack(),
                    List.fill(Card.suits.length)(List[Card]()),
                    List.fill(numberOfPiles)(Pile(List[Card](),List[Card]()))))
+
+  def playGame: List[List[GameState]] = {
+    val previousStates = new scala.collection.mutable.HashSet[GameState]
+    def playGameRec(statesToTry: List[GameHistory], pastWins: List[List[GameState]]): List[List[GameState]] =
+      statesToTry match {
+        case (nextToTry :: restToTry) => {
+          previousStates += nextToTry.state
+          if (nextToTry.state.isWin)
+/* debug */ { println("Tried " + previousStates.size.toString + " states: Got a win, backtracking to explore other possibilities")
+            playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
+/* debug */ }
+          else
+/* debug */ {
+/* debug */   val newListToTry = nextToTry.addAllNextMoves(restToTry, previousStates.contains(_))
+/* debug */   if ((previousStates.size % 100) == 0) println("Tried " + previousStates.size.toString + " states: Adding " + (newListToTry.size - restToTry.size).toString + " states to get a total of " + newListToTry.size.toString + " states to try")
+            playGameRec(nextToTry.addAllNextMoves(restToTry, previousStates.contains(_)), pastWins)
+            //playGameRec(nextToTry.addAllNextMoves(restToTry, previousStates.contains(_)), pastWins)
+/* debug */ }
+        }
+/* debug */ case _ => {
+/* debug */   println("Tried " + previousStates.size.toString + " states: No states left to try\n")
+/* debug */   pastWins
+        // case _ => pastWins
+/* debug */ }
+      }
+    playGameRec(List(GameHistory(newGame, List[GameState]())), List[List[GameState]]())
   }
 
 }
