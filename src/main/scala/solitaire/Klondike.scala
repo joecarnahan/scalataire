@@ -140,24 +140,51 @@ object Game {
 
   def playGame: List[List[GameState]] = {
     val previousStates = new scala.collection.mutable.HashSet[GameState]
+
+    /* debug */
+    def average(statesToTry: List[GameHistory]): Int = 
+      if (statesToTry.isEmpty)
+        0
+      else
+        statesToTry.foldLeft(0)(_ + _.pastStates.size) / statesToTry.size
+    def min(statesToTry: List[GameHistory]): Int = 
+      if (statesToTry.isEmpty)
+        0
+      else
+        statesToTry.foldLeft(Int.MaxValue)((a: Int, h: GameHistory) => a.min(h.pastStates.size))
+    def max(statesToTry: List[GameHistory]): Int =
+      if (statesToTry.isEmpty)
+        0
+      else
+        statesToTry.foldLeft(0)((a: Int, h: GameHistory) => a.max(h.pastStates.size))
+    def printState(statesToTry: List[GameHistory], message: String) = {
+      println("Tried " + previousStates.size.toString + " states so far, with " +
+              statesToTry.size.toString + " states left to try with these sizes: avg = " + 
+              average(statesToTry).toString + ", min = " + min(statesToTry).toString + 
+              ", max = " + max(statesToTry).toString)
+      println(message)
+    }
+    /* end debug */
+
     def playGameRec(statesToTry: List[GameHistory], pastWins: List[List[GameState]]): List[List[GameState]] =
       statesToTry match {
         case (nextToTry :: restToTry) => {
           previousStates += nextToTry.state
           if (nextToTry.state.isWin)
-/* debug */ { println("Tried " + previousStates.size.toString + " states: Got a win, backtracking to explore other possibilities")
+/* debug */ { printState(statesToTry, ("***** Got a win! *****"))
             playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
 /* debug */ }
           else
 /* debug */ {
 /* debug */   val newListToTry = nextToTry.addAllNextMoves(restToTry, previousStates.contains(_))
-/* debug */   if ((previousStates.size % 100) == 0) println("Tried " + previousStates.size.toString + " states: Adding " + (newListToTry.size - restToTry.size).toString + " states to get a total of " + newListToTry.size.toString + " states to try")
-            playGameRec(nextToTry.addAllNextMoves(restToTry, previousStates.contains(_)), pastWins)
+/* debug */   if ((previousStates.size % 1000) == 0) 
+/* debug */     printState(statesToTry, "Adding " + (newListToTry.size - restToTry.size).toString + " states")
+            playGameRec(newListToTry, pastWins)
             //playGameRec(nextToTry.addAllNextMoves(restToTry, previousStates.contains(_)), pastWins)
 /* debug */ }
         }
 /* debug */ case _ => {
-/* debug */   println("Tried " + previousStates.size.toString + " states: No states left to try\n")
+/* debug */   printState(statesToTry, "No moves left to try"); println()
 /* debug */   pastWins
         // case _ => pastWins
 /* debug */ }
