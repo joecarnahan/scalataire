@@ -97,7 +97,7 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
     moveSequence(this, moves, List(this))
   }
 
-  def isWin = suits.filter(_.size != Card.king).isEmpty
+  def isWin = suits.filter(_.size != (Card.king + 1)).isEmpty
 
 }
 
@@ -105,9 +105,8 @@ sealed case class GameHistory(state: GameState, pastStates: List[GameState]) {
 
   def allStates: List[GameState] = state :: pastStates
 
-  def addAllNextMoves(startingList: List[GameHistory], movesToSkip: GameState => Boolean): List[GameHistory] =
-    state.nextStates(movesToSkip).map(GameHistory(_, allStates)).
-      foldLeft(startingList)((histories: List[GameHistory], newHistory: GameHistory) => newHistory :: histories)
+  def getAllNextStates(movesToSkip: GameState => Boolean): Iterable[GameHistory] =
+    state.nextStates(movesToSkip).map(GameHistory(_, allStates))
 
 }
 
@@ -142,43 +141,41 @@ object Game {
 
   def playGame: List[List[GameState]] = {
     val previousStates = new scala.collection.mutable.HashSet[GameState]
+    val pendingStates = new scala.collection.mutable.HashSet[GameState]
 
     /* debug */
-    def average(statesToTry: List[GameHistory]): Int = 
+    def average(statesToTry: Iterable[GameHistory]): Int = 
       if (statesToTry.isEmpty)
         0
       else
         statesToTry.foldLeft(0)(_ + _.pastStates.size) / statesToTry.size
-    def max(statesToTry: List[GameHistory]): Int =
+    def max(statesToTry: Iterable[GameHistory]): Int =
       if (statesToTry.isEmpty)
         0
       else
         statesToTry.foldLeft(0)((a: Int, h: GameHistory) => a.max(h.pastStates.size))
-    def printState(statesToTry: List[GameHistory], message: String) = {
+    def printState(statesToTry: Iterable[GameHistory], message: String) = {
       println("Tried " + previousStates.size.toString + " states so far, with " +
               statesToTry.size.toString + " states left to try with these sizes: avg = " + 
               average(statesToTry).toString + ", max = " + max(statesToTry).toString + ": " + message)
     }
     /* end debug */
 
-    def playGameRec(statesToTry: List[GameHistory], pastWins: List[List[GameState]]): List[List[GameState]] =
+    def playGameRec(statesToTry: Iterable[GameHistory], pastWins: List[List[GameState]]): List[List[GameState]] =
       statesToTry match {
-        case (nextToTry :: restToTry) => {
-          previousStates += nextToTry.state
+        case (nextToTry :: restToTry) => 
           if (nextToTry.state.isWin)
 /* debug */ { printState(statesToTry, ("***** Got a win! *****"))
-            playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
+              playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
 /* debug */ }
-          else
-            // TODO Modify filter function to not rule out wins
-/* debug */ {
-/* debug */   val newListToTry = nextToTry.addAllNextMoves(restToTry, previousStates.contains(_))
-/* debug */   if ((previousStates.size % 1000) == 0) 
-/* debug */     printState(statesToTry, "Adding " + (newListToTry.size - restToTry.size).toString + " states")
-            playGameRec(newListToTry, pastWins)
-            //playGameRec(nextToTry.addAllNextMoves(restToTry, previousStates.contains(_)), pastWins)
-/* debug */ }
-        }
+          else {
+            previousStates += nextToTry.state
+            val newListToTry: Iterable[GameHistory] = 
+              nextToTry.getAllNextStates(x => previousStates.contains(x) || pendingStates.contains(x))
+            newListToTry.map((g: GameHistory) => pendingStates.add(g.state))
+/* debug */ if ((previousStates.size % 50000) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
+            playGameRec(newListToTry ++ restToTry, pastWins)
+          }
 /* debug */ case _ => {
 /* debug */   printState(statesToTry, "No moves left to try"); println()
 /* debug */   pastWins
