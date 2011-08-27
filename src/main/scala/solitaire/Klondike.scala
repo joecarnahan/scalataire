@@ -2,7 +2,42 @@ package solitaire
 
 sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
 
-  // TODO Implement equals and hashcode so that isomorphic states are considered equal
+  override def equals(other: Any): Boolean = 
+    other match {
+      case (g: GameState) => equalDeck(g.deck) && equalStack(g.stack) && (suits == g.suits) && equalPiles(g.piles)
+      case _ => false
+    }
+
+  override def hashCode(): Int = 3 + (5 * deckHash) + (7 * stackHash) + (11 * suits.hashCode) + (13 * pilesHash)
+
+  def cardEqual(pair: (Card, Card)): Boolean = 
+    (pair._1.value == pair._2.value) && (pair._1.isBlack == pair._2.isBlack)
+
+  def cardsEqual(cards1: Seq[Card], cards2: Seq[Card]): Boolean =
+    cards1.zip(cards2).foldLeft(true)((b: Boolean, pair: (Card,Card)) => b && cardEqual(pair))
+
+  def equalDeck(other: Deck): Boolean = cardsEqual(deck.cards, other.cards)
+
+  def equalStack(other: Stack): Boolean = cardsEqual(stack.cards, other.cards)
+
+  def equalPiles(other: List[Pile]): Boolean = 
+    piles.zip(other).foldLeft(true)((b: Boolean, pair: (Pile,Pile)) => 
+      b && cardsEqual(pair._1.faceup, pair._2.faceup) && cardsEqual(pair._1.facedown, pair._2.facedown))
+
+  def cardHash(card: Card): Int = 17 + (card.value * 19) + (if (card.isBlack) 23 else 29)
+
+  def deckHash: Int = 31 + 
+    deck.cards.foldLeft(37)((hash: Int, card: Card) => hash + cardHash(card))
+
+  def stackHash: Int = 41 + 
+    stack.cards.foldLeft(43)((hash: Int, card: Card) => hash + cardHash(card))
+
+  def pilesHash: Int = 47 + 
+    piles.foldLeft(53)((hash: Int, pile: Pile) => hash + (57 * pileHash(pile)))
+
+  def pileHash(pile: Pile): Int = 59 +
+    pile.faceup.foldLeft(61)((hash: Int, card: Card) => hash + cardHash(card)) +
+    pile.facedown.foldLeft(67)((hash: Int, card: Card) => hash + cardHash(card))
 
   def nl = System.getProperty("line.separator")
 
@@ -173,7 +208,7 @@ object Game {
             val newListToTry: Iterable[GameHistory] = 
               nextToTry.getAllNextStates(x => previousStates.contains(x) || pendingStates.contains(x))
             newListToTry.map((g: GameHistory) => pendingStates.add(g.state))
-/* debug */ if ((previousStates.size % 50000) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
+/* debug */ if ((previousStates.size % 1000) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
             playGameRec(newListToTry ++ restToTry, pastWins)
           }
 /* debug */ case _ => {
