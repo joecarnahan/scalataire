@@ -179,6 +179,8 @@ object Game {
     val pendingStates = new scala.collection.mutable.HashSet[GameState]
 
     /* debug */
+    val stepSize = 1000
+    var timeStamp = java.lang.System.currentTimeMillis
     def average(statesToTry: Iterable[GameHistory]): Int = 
       if (statesToTry.isEmpty)
         0
@@ -190,7 +192,10 @@ object Game {
       else
         statesToTry.foldLeft(0)((a: Int, h: GameHistory) => a.max(h.pastStates.size))
     def printState(statesToTry: Iterable[GameHistory], message: String) = {
-      println("Tried " + previousStates.size.toString + " states so far, with " +
+      val currentTime = java.lang.System.currentTimeMillis
+      val rate = (stepSize.asInstanceOf[Double] / ((currentTime - timeStamp) / 1000.0)).round
+      timeStamp = currentTime
+      println("Tried " + previousStates.size.toString + " states at " + rate + " states/s, with " +
               statesToTry.size.toString + " states left to try with these sizes: avg = " + 
               average(statesToTry).toString + ", max = " + max(statesToTry).toString + ": " + message)
     }
@@ -208,7 +213,7 @@ object Game {
             val newListToTry: Iterable[GameHistory] = 
               nextToTry.getAllNextStates(x => previousStates.contains(x) || pendingStates.contains(x))
             newListToTry.map((g: GameHistory) => pendingStates.add(g.state))
-/* debug */ if ((previousStates.size % 1000) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
+/* debug */ if ((previousStates.size % stepSize) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
             playGameRec(newListToTry ++ restToTry, pastWins)
           }
 /* debug */ case _ => {
