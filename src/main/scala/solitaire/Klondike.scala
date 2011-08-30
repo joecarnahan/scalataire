@@ -142,7 +142,7 @@ object Game {
     val pendingStates = new scala.collection.mutable.HashSet[GameState]
 
     /* debug */
-    val stepSize = 5000
+    val stepSize = 50000
     var timeStamp = System.currentTimeMillis
     def average(statesToTry: Iterable[GameHistory]): Int = 
       if (statesToTry.isEmpty)
