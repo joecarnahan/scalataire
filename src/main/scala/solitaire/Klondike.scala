@@ -179,7 +179,7 @@ object Game {
 /* debug */ if ((previousStates.size % stepSize) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
 /* debug */ if (((previousStates.size % (stepSize / 100)) == 0) && (System.in.available() > 0)) {
 /* debug */   val nl = System.getProperty("line.separator")
-/* debug */   println(nl + "Current state:" + nl + nextToTry.state + nl)
+/* debug */   println(nl + "After " + previousStates.size.toString + " states, current state:" + nl + nextToTry.state + nl)
 /* debug */   val nextMoves = nextToTry.state.nextStates(_ => false)
 /* debug */   val nextNewMoves = nextToTry.state.nextStates(x => previousStates.contains(x) || pendingStates.contains(x))
 /* debug */   if (nextNewMoves.size != newListToTry.size) sys.error("Inconsistent number of new states to try")
