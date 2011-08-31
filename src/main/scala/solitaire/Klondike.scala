@@ -137,7 +137,7 @@ object Game {
                    List.fill(Card.suits.length)(List[Card]()),
                    List.fill(numberOfPiles)(Pile(List[Card](),List[Card]()))))
 
-  def playGame: List[List[GameState]] = {
+  def playGame(sizeLimit: Int): List[List[GameState]] = {
     val previousStates = new scala.collection.mutable.HashSet[GameState]
     val pendingStates = new scala.collection.mutable.HashSet[GameState]
 
@@ -167,39 +167,43 @@ object Game {
     def playGameRec(statesToTry: Iterable[GameHistory], pastWins: List[List[GameState]]): List[List[GameState]] =
       statesToTry match {
         case (nextToTry :: restToTry) => 
-          if (nextToTry.state.isWin)
-/* debug */ { printState(statesToTry, ("***** Got a win! *****"))
-              playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
-/* debug */ }
+          if (nextToTry.state.isWin) {
+/* debug */ printState(statesToTry, ("***** Got a win! *****"))
+            playGameRec(restToTry, nextToTry.allStates.reverse :: pastWins)
+          }
           else {
             pendingStates -= nextToTry.state
             previousStates += nextToTry.state
-            val newListToTry: Iterable[GameHistory] = 
-              nextToTry.getAllNextStates(x => previousStates.contains(x) || pendingStates.contains(x))
-/* debug */ if ((previousStates.size % stepSize) == 0) printState(statesToTry, "Adding " + newListToTry.size.toString + " states")
-/* debug */ if (((previousStates.size % (stepSize / 100)) == 0) && (System.in.available() > 0)) {
-/* debug */   val nl = System.getProperty("line.separator")
-/* debug */   println(nl + "After " + previousStates.size.toString + " states, current state:" + nl + nextToTry.state + nl)
-/* debug */   val nextMoves = nextToTry.state.nextStates(_ => false)
-/* debug */   val nextNewMoves = nextToTry.state.nextStates(x => previousStates.contains(x) || pendingStates.contains(x))
-/* debug */   if (nextNewMoves.size != newListToTry.size) sys.error("Inconsistent number of new states to try")
-/* debug */   println("Skipping " + (nextMoves.size - nextNewMoves.size) + " states that were already tried")
-/* debug */   println("Remaining possible moves:" + nl)
-/* debug */   nextNewMoves.map((g: GameState) => {
-/* debug */     if (g.isWin) println("This is a win!!!!!")
-/* debug */     println(g.toString + nl)
-/* debug */   })
-/* debug */   println("Exiting")
-/* debug */   sys.exit(0)
-/* debug */ }
-            newListToTry.map((g: GameHistory) => pendingStates.add(g.state))
-            playGameRec(newListToTry ++ restToTry, pastWins)
+/* debug */ if ((previousStates.size % stepSize) == 0) printState(statesToTry, "")
+            if (nextToTry.pastStates.size >= sizeLimit) {
+              playGameRec(restToTry, pastWins)
+            }
+            else {
+              val newListToTry: Iterable[GameHistory] = 
+                nextToTry.getAllNextStates(x => previousStates.contains(x) || pendingStates.contains(x))
+/* debug */   if (((previousStates.size % (stepSize / 100)) == 0) && (System.in.available() > 0)) {
+/* debug */     val nl = System.getProperty("line.separator")
+/* debug */     println(nl + "After " + previousStates.size.toString + " states, current state:" + nl + nextToTry.state + nl)
+/* debug */     val nextMoves = nextToTry.state.nextStates(_ => false)
+/* debug */     val nextNewMoves = nextToTry.state.nextStates(x => previousStates.contains(x) || pendingStates.contains(x))
+/* debug */     if (nextNewMoves.size != newListToTry.size) sys.error("Inconsistent number of new states to try")
+/* debug */     println("Skipping " + (nextMoves.size - nextNewMoves.size) + " states that were already tried")
+/* debug */     println("Remaining possible moves:" + nl)
+/* debug */     nextNewMoves.map((g: GameState) => {
+/* debug */       if (g.isWin) println("This is a win!!!!!")
+/* debug */       println(g.toString + nl)
+/* debug */     })
+/* debug */     println("Exiting")
+/* debug */     sys.exit(0)
+/* debug */   }
+              newListToTry.map((g: GameHistory) => pendingStates.add(g.state))
+              playGameRec(newListToTry ++ restToTry, pastWins)
+            }
           }
-/* debug */ case _ => {
+            case _ => {
 /* debug */   printState(statesToTry, "No moves left to try"); println()
-/* debug */   pastWins
-        // case _ => pastWins
-/* debug */ }
+              pastWins
+            }
       }
     playGameRec(List(GameHistory(newGame, List[GameState]())), List[List[GameState]]())
   }
