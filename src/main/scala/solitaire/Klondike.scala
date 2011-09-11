@@ -1,12 +1,68 @@
+/**
+ * Code for playing the game of Klondike Solitaire.
+ *
+ * @author Joe Carnahan
+ */
+
 package solitaire
 
-sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], piles: List[Pile]) {
+/**
+ * Represents one of the seven stacks of cards on the table.  Each stack is
+ * either empty or has one or more faceup cards on top of zero or more facedown
+ * cards.  Removing all of the faceup cards from the stack causes the top
+ * facedown card to be flipped faceup.
+ */
+sealed case class Stack(faceup: List[Card], facedown: List[Card]) {
+
+  override def toString = faceup.toString + " on top of " + facedown.toString
+
+  def getTopCard: Option[Card] = faceup.headOption
+
+  def remove(cards: List[Card]): Stack = {
+    def removeAllOrNothing(cardsToRemove: List[Card], currentStack: Stack, originalStack: Stack): Stack =
+      if (cardsToRemove.isEmpty)
+        if (currentStack.faceup.isEmpty && !currentStack.facedown.isEmpty)
+          Stack(List(currentStack.facedown.head), currentStack.facedown.tail)
+        else
+          currentStack
+      else if (currentStack.faceup.isEmpty)
+        originalStack
+      else if (cardsToRemove.head == currentStack.faceup.head)
+        removeAllOrNothing(cardsToRemove.tail, Stack(currentStack.faceup.tail, currentStack.facedown), originalStack)
+      else
+        originalStack
+    removeAllOrNothing(cards, this, this)
+  }
+
+  def deal(card: Card): Stack = Stack(List(card), faceup ++ facedown)
+
+  def put(cards: List[Card]): Stack = 
+    if (faceup.isEmpty)
+      Stack(cards, List[Card]())
+    else
+      Stack(cards ++ faceup, facedown)
+
+  def substacks: List[List[Card]] = {
+    def substacks(cards: List[Card], stacks: List[List[Card]]): List[List[Card]] =
+      cards match {
+        case (_ :: rest) => substacks(rest, cards.reverse :: stacks)
+        case _ => stacks
+      }
+    substacks(faceup.reverse, List[List[Card]]())
+  }
+
+}
+
+sealed case class GameState(deck: Deck, pile: Pile, suits: List[List[Card]], stacks: List[Stack]) {
 
   def nl = System.getProperty("line.separator")
 
   override def toString = 
-    deck + nl + stack + nl + suits.mkString(nl) + nl + piles.mkString(nl)
+    deck + nl + pile + nl + suits.mkString(nl) + nl + stacks.mkString(nl)
     
+  /**
+   * @todo Try putting "draw" at the end to see if wins are found more quickly.
+   */
   def nextStates(movesToSkip: GameState => Boolean): Iterable[GameState] = 
     (List(draw) ++ putUpCards ++ moveCards).filterNot(movesToSkip)
 
@@ -16,22 +72,22 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
     if (n == 0)
       this
     else if (deck.cards.isEmpty) {
-      GameState(Deck(stack.flip), Stack(), suits, piles)
+      GameState(Deck(pile.flip), Pile(), suits, stacks)
     }
     else {
       val (topCard, remainingCards) = deck.deal
-      GameState(remainingCards, stack.put(topCard), suits, piles).draw(n - 1)
+      GameState(remainingCards, pile.put(topCard), suits, stacks).draw(n - 1)
     }
 
   def putUpCards: Iterable[GameState] =
-    (stack.top ++ piles.flatMap(_.getTopCard)).flatMap(putUpCard(_))
+    (pile.top ++ stacks.flatMap(_.getTopCard)).flatMap(putUpCard(_))
 
   def putUpCard(card: Card): Option[GameState] =
     if (topOfSuit(card.suit) == (card.value - 1))
       Some(GameState(deck,
-                     Stack(removeIfTopCard(stack.cards, card)),
+                     Pile(removeIfTopCard(pile.cards, card)),
                      suits.patch(card.suit, List(card :: suits(card.suit)), 1),
-                     piles.map(_.remove(List(card)))))
+                     stacks.map(_.remove(List(card)))))
     else
       None
 
@@ -46,21 +102,21 @@ sealed case class GameState(deck: Deck, stack: Stack, suits: List[List[Card]], p
   def moveCards: Iterable[GameState] = allMoveableStacks.flatMap(buildPossibleMoves(_))
 
   def allMoveableStacks: Iterable[List[Card]] = 
-    stack.top.map(List(_)) ++ piles.flatMap(_.substacks)
+    pile.top.map(List(_)) ++ stacks.flatMap(_.substacks)
 
   def buildPossibleMoves(cardsToMove: List[Card]): Iterable[GameState] = 
-    (0 until Game.numberOfPiles).flatMap(moveCardsToPile(_, cardsToMove))
+    (0 until Game.numberOfStacks).flatMap(moveCardsToStack(_, cardsToMove))
 
-  def moveCardsToPile(index: Int, cardsToMove: List[Card]): Option[GameState] = 
-    if (goesOn(cardsToMove.lastOption, piles(index).faceup.headOption))
+  def moveCardsToStack(index: Int, cardsToMove: List[Card]): Option[GameState] = 
+    if (goesOn(cardsToMove.lastOption, stacks(index).faceup.headOption))
       Some(GameState(deck,
                      if (cardsToMove.length == 1)
-                       Stack(removeIfTopCard(stack.cards, cardsToMove.head))
+                       Pile(removeIfTopCard(pile.cards, cardsToMove.head))
                      else 
-                       stack,
+                       pile,
                      suits,
-                     piles.map(_.remove(cardsToMove)).
-                       patch(index, List(piles(index).put(cardsToMove)), 1)))
+                     stacks.map(_.remove(cardsToMove)).
+                       patch(index, List(stacks(index).put(cardsToMove)), 1)))
     else
       None
 
@@ -110,20 +166,20 @@ sealed case class GameHistory(state: GameState, pastStates: List[GameState]) {
 
 object Game {
 
-  val numberOfPiles = 7
+  val numberOfStacks = 7
 
   def deal(initial: GameState) = {
     def dealCount(givenState: GameState, i: Int, j: Int): GameState = {
-      if (i >= numberOfPiles)
+      if (i >= numberOfStacks)
         givenState
       else if (j > i)
         dealCount(givenState, i+1, 0)
       else {
         val (topCard, remainingCards) = givenState.deck.deal
         dealCount(GameState(remainingCards,
-                            givenState.stack,
+                            givenState.pile,
                             givenState.suits,
-                            givenState.piles.patch(i, List(givenState.piles(i).deal(topCard)), 1)),
+                            givenState.stacks.patch(i, List(givenState.stacks(i).deal(topCard)), 1)),
                   i,
                   j+1)
       }
@@ -133,9 +189,9 @@ object Game {
 
   def newGame: GameState =
     deal(GameState(Deck.shuffle, 
-                   Stack(),
+                   Pile(),
                    List.fill(Card.suits.length)(List[Card]()),
-                   List.fill(numberOfPiles)(Pile(List[Card](),List[Card]()))))
+                   List.fill(numberOfStacks)(Stack(List[Card](),List[Card]()))))
 
   def playGame(sizeLimit: Int): List[List[GameState]] = {
     val previousStates = new scala.collection.mutable.HashSet[GameState]

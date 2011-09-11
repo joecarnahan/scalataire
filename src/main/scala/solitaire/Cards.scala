@@ -40,58 +40,16 @@ object Deck {
 }
 
 /**
- * A stack is a list of cards onto which cards can be placed and that can
- * be flipped over.  A common use for a card stack would be a discard pile.
+ * A pile is a list of cards onto which cards can be placed and that can
+ * be flipped over.  A common use for a card pile would be a discard pile.
  */
-sealed case class Stack(cards: List[Card]) {
+sealed case class Pile(cards: List[Card]) {
   def top = if (cards.isEmpty) None else Some(cards.head)
-  def put(card: Card) = Stack(card :: cards)
+  def put(card: Card) = Pile(card :: cards)
   def flip = cards.reverse
 }
 
-object Stack {
-  def apply(): Stack = Stack(List[Card]())
-}
-
-// RESUME HERE
-sealed case class Pile(faceup: List[Card], facedown: List[Card]) {
-
-  override def toString = faceup.toString + " on top of " + facedown.toString
-
-  def getTopCard: Option[Card] = faceup.headOption
-
-  def remove(cards: List[Card]): Pile = {
-    def removeAllOrNothing(cardsToRemove: List[Card], currentPile: Pile, originalPile: Pile): Pile =
-      if (cardsToRemove.isEmpty)
-        if (currentPile.faceup.isEmpty && !currentPile.facedown.isEmpty)
-          Pile(List(currentPile.facedown.head), currentPile.facedown.tail)
-        else
-          currentPile
-      else if (currentPile.faceup.isEmpty)
-        originalPile
-      else if (cardsToRemove.head == currentPile.faceup.head)
-        removeAllOrNothing(cardsToRemove.tail, Pile(currentPile.faceup.tail, currentPile.facedown), originalPile)
-      else
-        originalPile
-    removeAllOrNothing(cards, this, this)
-  }
-
-  def deal(card: Card): Pile = Pile(List(card), faceup ++ facedown)
-
-  def put(cards: List[Card]): Pile = 
-    if (faceup.isEmpty)
-      Pile(cards, List[Card]())
-    else
-      Pile(cards ++ faceup, facedown)
-
-  def substacks: List[List[Card]] = {
-    def substacks(cards: List[Card], stacks: List[List[Card]]): List[List[Card]] =
-      cards match {
-        case (_ :: rest) => substacks(rest, cards.reverse :: stacks)
-        case _ => stacks
-      }
-    substacks(faceup.reverse, List[List[Card]]())
-  }
-
+object Pile {
+  def apply(): Pile = Pile(List[Card]())
 }
 
