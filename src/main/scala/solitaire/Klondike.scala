@@ -97,15 +97,13 @@ sealed case class GameState(deck: Deck, pile: Pile, suits: List[List[Card]], sta
    * up onto their suit piles, or moving cards onto a stack from either the pile
    * of dealt cards or from one of the others stacks.
    * 
-   * @todo Try putting "draw" at the end to see if wins are found more quickly.
-   *
    * @param movesToSkip
    *          A function to indicate which moves should be skipped.  One obvious
    *          choice for this function would be a test to determine if a state
    *          has already been visited, but other filters could be used.
    */
   def nextStates(movesToSkip: GameState => Boolean): Iterable[GameState] = 
-    (List(draw) ++ putUpCards ++ moveCards).filterNot(movesToSkip)
+    (putUpCards ++ moveCards ++ List(draw)).filterNot(movesToSkip)
 
   /**
    * Deals the top three cards off of the deck or flips the pile over to make a
