@@ -224,32 +224,6 @@ sealed case class GameState(deck: Deck, pile: Pile, suits: List[List[Card]], sta
    */
   def isWin = suits.filter(_.size != (Card.king + 1)).isEmpty
 
-  /**
-   * Builds a sequence of states that could be reached from this state in the
-   * given number of moves.
-   */
-  def moveSequence(moves: Int): List[GameState] = {
-
-    val previousMoves = new scala.collection.mutable.HashSet[GameState]
-
-    def moveSequence(current: GameState, movesLeft: Int, pastSequence: List[GameState]): List[GameState] =
-      if (movesLeft <= 0)
-        pastSequence.reverse
-      else {
-        val nextStatesResult = current.nextStates(previousMoves.contains(_))
-        if (nextStatesResult.isEmpty)
-          pastSequence.reverse
-        else {
-          val nextMove = nextStatesResult.last
-          previousMoves += nextMove
-          moveSequence(nextMove, movesLeft - 1, nextMove :: pastSequence)
-        }
-      }
-
-    previousMoves += this
-    moveSequence(this, moves, List(this))
-  }
-
 }
 
 /**
