@@ -1,3 +1,9 @@
+/**
+ * Main program for the Klondike Solitaire game.
+ *
+ * @author Joe Carnahan
+ */
+
 package solitaire
 
 object Main {
