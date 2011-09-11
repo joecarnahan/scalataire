@@ -291,6 +291,8 @@ object Game {
    */
   def playGame(sizeLimit: Int): List[List[GameState]] = {
 
+    import scala.collection.mutable.Set
+
     val stepSize = 50000
     var timeStamp = System.currentTimeMillis
     def average(statesToTry: Iterable[GameHistory]): Int = 
@@ -339,10 +341,8 @@ object Game {
                 println("Exiting")
                 sys.exit(0)
               }
-              playGameRec(newListToTry ++ restToTry, 
-                          pastWins,
-                          newListToTry.foldLeft(knownStates)((s: Set[GameState], h: GameHistory) => s + h.state), 
-                          counter + 1)
+              newListToTry.map((h: GameHistory) => knownStates += h.state)
+              playGameRec(newListToTry ++ restToTry, pastWins, knownStates, counter + 1)
             }
           }
         case _ => {
