@@ -1,0 +1,41 @@
+Confession #1: I spend too much time playing Solitaire on my phone on the train
+to and from work.
+
+Confession #2: I can be a bit of a perfectionist.
+
+Putting these two together, you shouldn't be surprised that I really want to
+know what fraction of Solitaire games are winnable.  After all, if my current
+win percentage is 24%, does that mean that I'm awesome because only 25% of 
+games were winnable, or does it mean that I'm still losing two-thirds of the
+75% of games that I could have won?
+
+There's surprisingly little academic research out there on this important 
+question. ;-)  However, I did find the following:
+ - http://www.techuser.net/klondikeprob.html
+ - http://web.engr.oregonstate.edu/~afern/papers/solitaire.pdf
+The question of how many Solitaire games start with no initial moves is well
+established at about 0.025%, but the fraction of all initial deals that can
+never be won is still a mystery.
+
+So, knowing full well that the task was computationally intractable, I decided
+to write my own Solitaire solver.  The goal is not to just find a solution but
+to explore all of the possible cases in order to prove that there is not any
+solution.  
+
+I occasionally come across games that have only a handful of reachable states.
+However, most games that I run have no winning results within the first
+million states that I explore, at which point the simulator tends to bog down
+under the burden of checking each new state against the set of states that have
+already been considered.  scala.collection.immutable.Set usually slows down at 
+around a half-million members, while scala.collection.mutable.Set gets up to 
+about a million members.  This means that the next step for this project would 
+be to explore better representations for the list of previously-checked states
+that would better handle millions of already-visited states.
+
+Another possible improvement would be to identify equivalent states and to
+rule all of them out whenever any one of them is encountered.  For example, it
+is always possible to move a king from one empty space to another, but such 
+moves never make any difference to the outcome of the game.  Unfortunately, I
+did not find a way to check for such equivalent states that led to a net gain
+in performance, since overloading equals() and hashCode() for game states 
+seemed to cause a significant slowdown in itself.
